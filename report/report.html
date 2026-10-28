@@ -1,0 +1,429 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Forecasting highway traffic speed 15–60 minutes ahead — Phase 1 report, Team T082</title>
+<style>
+  @page { size: A4; margin: 18mm 17mm 20mm 17mm; }
+  html { font-size: 10.4pt; }
+  body { font-family: "Poppins", "DejaVu Sans", sans-serif; color: #1a1a1a; line-height: 1.5; margin: 0; }
+  .hero { background: #1a1a1a; color: #fff; border-radius: 16px; padding: 22px 26px 20px 26px; margin-bottom: 26px; }
+  .hero h1 { font-size: 24.5pt; font-weight: 700; text-transform: uppercase; line-height: 1.08; letter-spacing: -0.3px; margin: 0 0 12px 0; }
+  .hero p { margin: 0 0 4px 0; font-size: 10.5pt; color: #d9d9d9; }
+  .hero p b { color: #fff; }
+  h2 { font-size: 15.5pt; font-weight: 700; margin: 0 0 9px 0; line-height: 1.25; }
+  h3 { font-size: 11.6pt; font-weight: 700; margin: 16px 0 6px 0; }
+  p { margin: 0 0 9px 0; }
+  ul, ol { margin: 0 0 9px 0; padding-left: 22px; }
+  li { margin-bottom: 5px; }
+  hr.sec { border: 0; border-top: 1.2px solid #1a1a1a; margin: 22px 0 18px 0; }
+  section { break-inside: auto; }
+  h2, h3 { break-after: avoid; }
+  table { width: 100%; border-collapse: collapse; margin: 6px 0 12px 0; font-size: 9.6pt; }
+  th { text-align: left; font-size: 7.4pt; letter-spacing: 1.1px; text-transform: uppercase; color: #6b6b6b; font-weight: 600; padding: 4px 14px 6px 0; border-bottom: 1.2px solid #1a1a1a; }
+  td { padding: 6px 14px 6px 0; border-bottom: 0.6px solid #d9d9d9; vertical-align: top; }
+  th:last-child, td:last-child { padding-right: 0; }
+  th.r, td.r { text-align: right; white-space: nowrap; }
+  table.keep { break-inside: avoid; }
+  tr.total td { font-weight: 700; border-bottom: 1.2px solid #1a1a1a; }
+  tr.hl td { font-weight: 700; }
+  tr { break-inside: avoid; }
+  code { font-family: "DejaVu Sans Mono", monospace; font-size: 8.6pt; background: #eeeeee; padding: 1px 5px; border-radius: 4px; white-space: nowrap; }
+  .cap { font-size: 8.8pt; color: #6b6b6b; font-style: italic; margin: 4px 0 14px 0; }
+  figure { margin: 10px 0 8px 0; text-align: center; break-inside: avoid; }
+  figure img { max-width: 100%; max-height: 330px; border-radius: 10px; }
+  .two figure img { max-height: 225px; }
+  .two { display: flex; gap: 14px; }
+  .two figure { flex: 1; margin: 6px 0; }
+  .note { font-size: 9.4pt; color: #3a3a3a; }
+  .small { font-size: 9pt; color: #6b6b6b; }
+  .kpi { display: flex; gap: 12px; margin: 10px 0 14px 0; }
+  .kpi div { flex: 1; background: #f0f0f0; border-radius: 12px; padding: 10px 12px; }
+  .kpi .n { font-size: 17pt; font-weight: 700; line-height: 1.1; }
+  .kpi .l { font-size: 8.6pt; color: #4a4a4a; margin-top: 3px; }
+  .formula { font-family: "DejaVu Serif", serif; font-style: italic; }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>Forecasting highway traffic speed 15–60 minutes ahead</h1>
+  <p><b>Phase 1 Report · Advanced Machine Learning &amp; Deep Learning (CSAI)</b></p>
+  <p>Project 4 · Multi-Agent Traffic Flow Control via Graph Attention Networks and LWR Models</p>
+  <p><b>Team T082 · Section B</b> · Kartik Madaan, Arhan Alam, Chirag Lalwani, Siddhanth Sadshiv Raikar, Abhijeet Dey</p>
+  <p>Newton School of Technology, Rishihood University · October 2026</p>
+</div>
+
+<h2>Summary</h2>
+<p>We tried to predict <b>how fast traffic will be moving at each of 207 highway sensors in Los Angeles, 15, 30 and 60 minutes from now</b>, using the last hour of sensor readings, the clock, and what the neighbouring sensors are doing.</p>
+<p>What we found, in five points:</p>
+<ol>
+  <li><b>8% of the readings are broken, not slow.</b> A reading of exactly 0 mph is a sensor that was offline. We marked those cells "unknown" — nothing deleted, nothing guessed — and the models handle them directly.</li>
+  <li><b>Traffic follows the clock.</b> Weekdays have two rush hours; at 17:00, <b>35%</b> of sensors are jammed. A sensor's speed is <b>84%</b> correlated with its own speed one hour earlier, so "what it usually does at this time of week" and "what it did in the last hour" are both strong clues.</li>
+  <li><b>Neighbours matter, and physics says why.</b> A jam grows backwards, like a queue, at 15–20 km/h (the LWR model). Sensors under 1 km apart have a speed correlation of <b>0.85</b>; 10 km apart, <b>0.19</b>. We turned this into eight neighbour features.</li>
+  <li><b>Our best model works.</b> XGBoost with neighbour features has an average error of <b>2.87 / 3.32 / 3.78 mph</b> at 15 / 30 / 60 minutes, against 5.33 mph for "the speed stays the same" and 4.19 mph for "the usual speed" at 60 minutes. A published deep graph model (DCRNN) reaches 3.60 at 60 minutes, so a classical model gets close.</li>
+  <li><b>Neighbour information helps most in rush hour and least at 60 minutes.</b> Adding the eight neighbour features lowers the error by 4.1 / 3.3 / 1.8%, three times more in the peaks than off-peak. One hop of neighbours only "sees" 5–15 minutes ahead; that fading is exactly the gap a multi-hop graph network should close in Phase 2.</li>
+</ol>
+
+<hr class="sec">
+
+<h2>1. Why we chose this problem</h2>
+<ul>
+  <li><b>It matters in real life.</b> A traffic-signal controller or ramp meter has to act before the jam arrives. Knowing the speed now is not enough; it needs the next hour. Phase 1 builds that forecast; Phase 2 will add the control part, in simulation only.</li>
+  <li><b>The data is real and public.</b> We used METR-LA (Li et al., 2018): 207 loop detectors on Los Angeles County highways, a reading every five minutes from 1 March to 27 June 2012, plus a road map that says which sensors are neighbours. It is the standard benchmark, so our numbers can be compared with published ones.</li>
+  <li><b>It is a real machine-learning challenge.</b> The data is a time series, so a random train/test split would cheat. Eight percent of readings are broken. Errors concentrate in rush hour, where the forecast matters most. And the project brief asks a specific question: how much does a sensor gain from looking at its neighbours?</li>
+</ul>
+<p>Traffic has been modelled as a fluid since the 1950s: Lighthill and Whitham (1955) and Richards (1956) showed that cars are conserved along a road and that disturbances travel as waves — forwards when the road is empty, <b>backwards</b> when it is congested. Short-term forecasting has a long history of statistical models (Vlahogianni et al., 2014), with two simple predictors — "the usual speed" and "the speed stays the same" — remaining the yardsticks every method is judged against. Tree ensembles such as gradient boosting beat linear models for travel-time prediction (Zhang &amp; Haghani, 2015). The decisive step in recent years was to treat the sensors as a graph: DCRNN (Li et al., 2018) released the METR-LA benchmark we use, and graph attention models (Veličković et al., 2018; Zhang et al., 2019) let the model learn how much to listen to each neighbour. On testing, Bergmeir and Benítez (2012) show that ordinary cross-validation is invalid for time series and that one must split by time. Phase 1 uses only classical models; its job is to build the baseline and the honest test bench that the Phase 2 graph model will be compared against.</p>
+
+<hr class="sec">
+
+<h2>2. The data</h2>
+<h3>What the dataset looks like</h3>
+<p>METR-LA is <b>one big table</b>: <b>34,272 rows</b> (one per five-minute slot over 119 days) and <b>207 columns</b> (one per sensor). Each cell is the average speed in miles per hour. There are no missing rows: every five-minute slot from 1 March to 27 June 2012 is present.</p>
+<p>It comes with a <b>road map</b>: where each sensor is, the <b>driving distance</b> between sensor pairs, and from those an adjacency matrix that says how strongly each sensor is linked to each neighbour (nearer = stronger; links longer than a cut-off are dropped). We rebuilt this matrix from the raw distance table and checked that it matches the published one exactly. The graph has <b>1,515 directed links</b>, about <b>7 neighbours per sensor</b>, and one sensor with no neighbours.</p>
+<div class="kpi">
+  <div><div class="n">207</div><div class="l">sensors (columns)</div></div>
+  <div><div class="n">34,272</div><div class="l">five-minute slots (rows)</div></div>
+  <div><div class="n">7.1 M</div><div class="l">readings in total</div></div>
+  <div><div class="n">1,515</div><div class="l">road links between sensors</div></div>
+</div>
+<p><b>What one example looks like.</b> For one sensor at one moment, we describe the situation with <b>34 input numbers</b> (Section 5) and the answers are the speed at that sensor <b>15, 30 and 60 minutes later</b>.</p>
+
+<h3>Data quality: the readings of 0 mph</h3>
+<p><b>8.1%</b> of all cells contain exactly 0 mph. A highway never averages exactly zero over five minutes, so these are not jams — they are sensors that were switched off. Three things confirm it:</p>
+<ul>
+  <li>The zeros sit between normal readings: a sensor reads 69, then 0, 0, 0, then 67 within 25 minutes.</li>
+  <li>They come in runs: <b>25,963 runs</b>, median 2 slots, but the longest <b>1,683 slots</b> (almost six days).</li>
+  <li>On <b>6.3%</b> of time slots <b>every</b> sensor reads 0 at once — a data-collection failure, not 207 simultaneous jams.</li>
+</ul>
+<p>So we <b>relabel every 0 as "unknown"</b>. Nothing is deleted: the table keeps all its rows and columns, and the worst sensor (20% unknown) is kept. Nothing is invented either: we do not fill the gaps with guessed values, because the long runs would carry stale readings through rush hours, and guessed <i>answers</i> would corrupt the scoring. The tree models accept unknown inputs directly; an example whose answer is unknown is simply skipped, both in training and in scoring (the same convention as the DCRNN paper).</p>
+<p>After this cleaning the speeds have a mean of <b>58.5 mph</b> and a median of <b>63.2 mph</b>; <b>9.0%</b> are below 35 mph, the threshold Caltrans uses for "congested". The distribution has two humps — free flow around 65 mph and a congested mode around 20–30 mph — which is the two-regime picture from traffic physics showing up in the data.</p>
+
+<h3>Splits</h3>
+<p>We cut the four months <b>by date</b>, never by shuffling, with a <b>one-hour gap</b> at each boundary so that no training answer lies inside the test period:</p>
+<table class="keep">
+  <tr><th>Group</th><th class="r">Slots</th><th>Dates</th><th>Used for</th></tr>
+  <tr><td>Train</td><td class="r">23,967</td><td>1 March – 23 May</td><td>Teaching the models</td></tr>
+  <tr><td>Validation</td><td class="r">3,403</td><td>23 May – 4 June</td><td>Deciding when to stop training (nothing else)</td></tr>
+  <tr><td>Test</td><td class="r">6,831</td><td>4 – 27 June</td><td>Final check, used once</td></tr>
+</table>
+
+<h3>How we got the number of examples</h3>
+<table>
+  <tr><th>Step</th><th class="r">Train</th><th class="r">Validation</th><th class="r">Test</th></tr>
+  <tr><td>1. Five-minute time slots</td><td class="r">23,967</td><td class="r">3,403</td><td class="r">6,831</td></tr>
+  <tr><td>2. Readings (slots × 207 sensors)</td><td class="r">4,961,169</td><td class="r">704,421</td><td class="r">1,414,017</td></tr>
+  <tr><td>3. Exactly 0 mph → marked unknown</td><td class="r">−353,732 (7.1%)</td><td class="r">−49,317 (7.0%)</td><td class="r">−171,637 (12.1%)</td></tr>
+  <tr><td>4. Inputs per example: 34 numbers (26 about the sensor itself + 8 about its neighbours)</td><td class="r"></td><td class="r"></td><td class="r"></td></tr>
+  <tr class="total"><td>Examples whose answer (speed 60 min later) is known</td><td class="r">4,607,444</td><td class="r">655,115</td><td class="r">1,242,308</td></tr>
+  <tr><td>…of which jammed (below 35 mph)</td><td class="r">8.6%</td><td class="r">8.7%</td><td class="r">10.3%</td></tr>
+</table>
+<p>Two things to notice:</p>
+<ul>
+  <li>The test weeks have <b>more unknown readings</b> (12%) than the training weeks (7%) — several whole-network outages fall in June — which makes "masked" scoring (Section 6) essential.</li>
+  <li>The test weeks also have <b>more jams</b> (10.3% vs 8.6%), partly because mid-June includes the start of the summer holidays. The test period is slightly harder than the training period, not easier.</li>
+</ul>
+
+<hr class="sec">
+
+<h2>3. How we avoided cheating (data leakage)</h2>
+<p>"Leakage" means the model sees information it would not have in real life, which makes its score look better than it really is. We took six steps against it:</p>
+<ol>
+  <li><b>Split by date, not at random.</b> Two readings five minutes apart are nearly identical. A random split would put near-copies of the test data into training, and the score would look far better than it really is (Bergmeir &amp; Benítez, 2012).</li>
+  <li><b>Leave a gap.</b> A one-hour gap at each boundary, so no training example's answer falls inside the validation or test period.</li>
+  <li><b>Only look backwards.</b> Every input is built from the past: the sensor's last hour, and the neighbours' speeds now, 5 and 10 minutes ago. The answer is only ever used as the answer.</li>
+  <li><b>Compute "the usual speed" from training weeks only.</b> The time-of-week average for each sensor is a strong feature; it is calculated on March–May and then simply looked up for June.</li>
+  <li><b>Fit the scaler on train only.</b> The linear model needs standardised inputs; the scaling constants come from training rows.</li>
+  <li><b>Use the test set once.</b> All model settings were fixed in advance; the validation weeks only decide when to stop training; the test weeks were scored once, at the end.</li>
+</ol>
+<p>Two of our eight automated tests check this directly: that no test sample's input window reaches into the training targets, and that the "usual speed" profile does not change when the test data is altered.</p>
+
+<hr class="sec">
+
+<h2>4. What we learned from exploring the data (EDA)</h2>
+<h3>Off-peak vs rush hour</h3>
+<table>
+  <tr><th>Measurement</th><th class="r">Off-peak</th><th class="r">Weekday rush hour</th><th class="r">Weekend</th></tr>
+  <tr><td>Mean speed (mph)</td><td class="r">59.6</td><td class="r">50.1</td><td class="r">61.7</td></tr>
+  <tr><td>Spread of speeds, standard deviation (mph)</td><td class="r">10.6</td><td class="r">18.5</td><td class="r">10.6</td></tr>
+  <tr><td>Readings below 35 mph ("jammed")</td><td class="r">5.2%</td><td class="r">26.5%</td><td class="r">5.0%</td></tr>
+  <tr class="hl"><td>Sensors jammed at 17:00 on a weekday</td><td class="r">—</td><td class="r">35%</td><td class="r">—</td></tr>
+</table>
+<p>Rush hour = weekdays 07–10 and 16–19. The average speed drops by about 10 mph, the spread almost doubles, and the share of jammed readings goes from 5% to 26%. Weekends look like off-peak all day. The evening peak is deeper than the morning one.</p>
+<div class="two">
+  <figure><img src="../figures/fig_eda_daily_profile.png" alt="Average speed by time of day"><div class="cap">Average speed by time of day: two weekday rush hours (shaded), flat weekends.</div></figure>
+  <figure><img src="../figures/fig_eda_weekly_heatmap.png" alt="Weekly heat-map"><div class="cap">Speed by day of week and hour: the same pattern every week.</div></figure>
+</div>
+
+<h3>How speed relates to itself and to the neighbours</h3>
+<p>"r" (correlation) is a number from −1 to +1 that shows how much two things move together; 0 means no link.</p>
+<table>
+  <tr><th>Pair</th><th class="r">r</th><th>What it means</th></tr>
+  <tr><td>A sensor's speed &amp; its own speed one hour earlier</td><td class="r">0.84</td><td>The last hour is a strong input</td></tr>
+  <tr><td>A sensor's speed &amp; its own speed 24 hours earlier</td><td class="r">0.64</td><td>A daily cycle: "the usual speed" is a strong input</td></tr>
+  <tr><td>Two sensors under 1 km apart (by road)</td><td class="r">0.85</td><td>Close neighbours move together</td></tr>
+  <tr><td>Two sensors 5–6 km apart</td><td class="r">0.29</td><td>The link fades with distance…</td></tr>
+  <tr><td>Two sensors 10–11 km apart</td><td class="r">0.19</td><td>…so only the near neighbourhood is informative</td></tr>
+</table>
+<p>These match real-world physics (Section 5), which tells us the data is trustworthy. Each sensor also has its own personality: congestion returns every weekday, but its depth and timing differ from sensor to sensor. That is why we train <b>one model per sensor</b>.</p>
+<div class="two">
+  <figure><img src="../figures/fig_eda_spatial_correlation.png" alt="Correlation vs distance"><div class="cap">20,000 sensor pairs: correlation of their speeds falls with the road distance between them (orange = median per km).</div></figure>
+  <figure><img src="../figures/fig_eda_missing.png" alt="Missing readings"><div class="cap">Share of unknown readings per day (left) and per sensor (right); spikes are whole-network outages.</div></figure>
+</div>
+
+<hr class="sec">
+
+<h2>5. Feature engineering</h2>
+<p>A model learns from examples of the form "situation → what happened next". For every sensor at every five-minute slot we describe the situation with <b>34 numbers</b>, in five groups:</p>
+<table>
+  <tr><th>Group</th><th>Feature(s)</th><th>How we made it</th><th>Why</th></tr>
+  <tr><td>A · own history</td><td><code>lag_0</code> … <code>lag_11</code> (12)</td><td>The sensor's speed now and in each of the previous 11 slots</td><td>The last hour is 84% correlated with the next</td></tr>
+  <tr><td>B · summary</td><td><code>win_mean</code>, <code>win_std</code>, <code>win_min</code>, <code>win_max</code>, <code>win_frac_missing</code>, <code>trend_15min</code> (6)</td><td>Mean, spread, min and max of that hour; share of it unknown; change over the last 15 min</td><td>Tells the model whether speed is steady, falling, or unreliable</td></tr>
+  <tr><td>C · the clock</td><td><code>tod_sin</code>, <code>tod_cos</code>, <code>dow_sin</code>, <code>dow_cos</code>, <code>is_weekend</code>, <code>hour</code> (6)</td><td>Time of day and day of week as sine/cosine pairs, plus a weekend flag and the hour</td><td>23:55 and 00:05 should look close; Sunday should sit next to Monday</td></tr>
+  <tr><td>D · usual speed</td><td><code>ha_now</code>, <code>dev_from_ha</code> (2)</td><td>Average speed of this sensor at this time of week (training weeks only); current speed minus that</td><td>"Normal for a Tuesday at 5 pm", and how far from normal we are now</td></tr>
+  <tr><td>E · neighbours</td><td><code>up_mean</code> ×3, <code>down_mean</code> ×3, <code>nbr_min</code>, <code>nbr_frac_congested</code> (8)</td><td>Weighted average speed of upstream and of downstream neighbours now, 5 and 10 min ago; slowest neighbour; share of neighbours below 35 mph</td><td>Jams travel between sensors (below)</td></tr>
+  <tr class="hl"><td>—</td><td>speed +15, +30, +60 min</td><td>The same table, shifted forward in time</td><td>The answers we want to predict</td></tr>
+</table>
+<p>The brief mentions flow and occupancy as possible inputs; the public METR-LA release contains speed only, so every feature is built from speed. Through the speed–density relation, speed is a proxy for density, so most of the information about the traffic regime is still there.</p>
+
+<h3>Why the neighbour features: jams grow backwards</h3>
+<p>Think of a queue at a ticket counter: new people join at the back, so the queue grows <i>backwards</i>. A traffic jam does the same. In the Lighthill–Whitham–Richards (LWR) model, cars are conserved along the road, and speed falls as the road gets denser (Greenshields, 1935). A small disturbance then travels at the <b>wave speed</b> <span class="formula">c(ρ) = v<sub>f</sub>(1 − 2ρ/ρ<sub>j</sub>)</span>, where <span class="formula">v<sub>f</sub></span> is the free-flow speed and <span class="formula">ρ<sub>j</sub></span> the density at which nothing moves. When the road is emptier than half the jam density, <span class="formula">c</span> is positive and information moves forward with the cars; when it is more congested, <span class="formula">c</span> is <b>negative</b> and information moves backwards, against the cars. The tail of a real jam moves upstream at about <b>15–20 km/h</b> (Treiber &amp; Kesting, 2013).</p>
+<p>Three decisions follow:</p>
+<ul>
+  <li>Whether sensor <i>i</i> will be congested soon depends on its <b>downstream</b> neighbours (a queue growing back towards it) and its <b>upstream</b> neighbours (traffic about to arrive). So we keep separate upstream and downstream averages.</li>
+  <li>Nearer neighbours matter more, so the averages are weighted by the road-graph link strength, and unknown neighbours are left out of the average.</li>
+  <li>A backward wave covers 10–20 km in an hour — more than one hop in our graph. One-hop features should therefore help most at short horizons and run out of reach at 60 minutes. A multi-layer graph network (Phase 2) can look several hops out.</li>
+</ul>
+
+<h3>Local vs spatial</h3>
+<table class="keep">
+  <tr><th>Feature set</th><th>What it contains</th><th class="r">Number of features</th></tr>
+  <tr><td>Local</td><td>Groups A–D: what the sensor knows about itself</td><td class="r">26</td></tr>
+  <tr><td>Spatial</td><td>Local + group E: the neighbours</td><td class="r">34</td></tr>
+</table>
+<p>Every learned model is trained <b>twice</b>, once with each set. Same rows, same split, same settings — the only difference is the eight neighbour columns. That is what makes the comparison in Section 7 a fair measurement of what the neighbours are worth.</p>
+
+<hr class="sec">
+
+<h2>6. The models</h2>
+<p>We trained five models, from the simplest to the most powerful. Each one answers one question.</p>
+<table>
+  <tr><th>Model</th><th>What it does</th><th>The question it answers</th></tr>
+  <tr><td><b>Historical average</b></td><td>Predicts the sensor's usual speed at this time of week. No learning.</td><td>How far does "the usual" get you?</td></tr>
+  <tr><td><b>Persistence</b></td><td>Predicts the speed stays what it is now. No learning.</td><td>How far does "right now" get you?</td></tr>
+  <tr><td><b>Ridge regression</b></td><td>Gives each input a weight and adds them up (a straight line); a penalty keeps the weights small.</td><td>Is a simple linear model enough?</td></tr>
+  <tr><td><b>XGBoost</b></td><td>Builds many small decision trees one after another, each fixing the last one's mistakes.</td><td>Do combinations of clues help ("5 pm <b>and</b> speed dropping <b>and</b> the sensor ahead is slow")?</td></tr>
+  <tr><td><b>Random Forest</b></td><td>Builds 100 trees on random samples of the data and averages them; one forest predicts all three horizons at once.</td><td>Is XGBoost's result just one method's quirk?</td></tr>
+</table>
+<p><b>One model per sensor.</b> Sensors have different personalities, so we train a separate model for each of the 207 sensors (and, for XGBoost, one per sensor per horizon: <b>621 models</b>, about 12 minutes on two CPU cores).</p>
+<p><b>Settings</b> were chosen in advance from standard practice, not tuned on the test set. XGBoost: tree depth 6, learning rate 0.05, at least 5 examples per leaf, 80% of rows and columns per tree, squared-error loss, at most 600 trees with <b>early stopping</b> — stop when the validation error has not improved for 40 trees. On average only <b>129</b> of the 600 trees were kept, so the models are not over-fitting. Random Forest: 100 trees, depth at most 14, at least 5 examples per leaf, half the features considered at each split. Ridge: penalty α = 1, inputs standardised, unknown inputs filled with the sensor's usual speed (the only model that needs filling).</p>
+<p>Both tree libraries accept <b>unknown inputs</b>: at every split, the tree learns which way to send a missing value. That is why the masked outages need no filling.</p>
+
+<h3>How we score the models</h3>
+<p>With <i>x</i> the true speed and <i>x̂</i> the prediction, over all test examples whose true speed is known:</p>
+<ul>
+  <li><b>MAE</b> (mean absolute error) — the average size of the mistake, in mph. Our headline number: easy to read, robust, and what the literature reports for this dataset.</li>
+  <li><b>RMSE</b> (root mean squared error) — punishes big misses more. In traffic, the big miss is a jam that was not seen coming.</li>
+  <li><b>MAPE</b> (mean absolute percentage error) — a percentage, reported because papers do, but it balloons whenever the true speed is small, so it should be read next to MAE.</li>
+  <li><b>Masked</b> means unknown true speeds are skipped, so an outage never counts as a mistake. Without this, a correct forecast of 67 mph during an outage would be scored as a 67 mph error.</li>
+  <li><b>Sliced</b>: by horizon (15/30/60 min), rush hour vs off-peak, by hour of day, and per sensor.</li>
+  <li><b>As a jam detector</b>: call "jam" when the predicted speed is below 35 mph and score it with precision (of the jams we called, how many were real), recall (of the real jams, how many we caught) and F1.</li>
+</ul>
+<p><b>Why not accuracy?</b> For the jam detector, about 90% of answers are "free-flowing". A model that <b>always</b> says "free" gets 89.7% accuracy while catching zero jams. Accuracy hides failure on rare events; MAE, precision and recall do not.</p>
+
+<hr class="sec">
+
+<h2>7. Results</h2>
+<h3>Validation weeks (used only to choose when to stop training)</h3>
+<table class="keep">
+  <tr><th>Model</th><th class="r">MAE 15 min</th><th class="r">MAE 30 min</th><th class="r">MAE 60 min</th><th>Result</th></tr>
+  <tr><td>Historical average</td><td class="r">4.32</td><td class="r">4.32</td><td class="r">4.30</td><td>Same at every horizon: ignores the present</td></tr>
+  <tr><td>Persistence</td><td class="r">3.21</td><td class="r">3.80</td><td class="r">4.75</td><td>Great at 15 min, poor at 60: ignores the usual</td></tr>
+  <tr><td>Ridge (local)</td><td class="r">3.10</td><td class="r">3.82</td><td class="r">4.87</td><td>A straight line is not enough</td></tr>
+  <tr><td>XGBoost (local)</td><td class="r">2.85</td><td class="r">3.31</td><td class="r">3.75</td><td>Combines "now" and "usual"</td></tr>
+  <tr class="hl"><td>XGBoost (spatial)</td><td class="r">2.70</td><td class="r">3.16</td><td class="r">3.63</td><td>Best → used on test</td></tr>
+  <tr><td>Random Forest (local)</td><td class="r">2.86</td><td class="r">3.32</td><td class="r">3.79</td><td>Same story as XGBoost</td></tr>
+  <tr><td>Random Forest (spatial)</td><td class="r">2.73</td><td class="r">3.16</td><td class="r">3.69</td><td>A tie with XGBoost</td></tr>
+</table>
+<p><b>XGBoost with neighbour features was the best model</b> on validation, and the Random Forest with neighbour features was 0.03–0.06 mph behind. Both beat the linear model by a wide margin at 60 minutes, which tells us the "if this <i>and</i> that" interactions matter. The ranking is the same on the test set below, which is the evidence that nothing was tuned on the test data.</p>
+
+<h3>Test weeks (final check, used once) — MAE in mph</h3>
+<table class="keep">
+  <tr><th>Model</th><th class="r">15 min</th><th class="r">30 min</th><th class="r">60 min</th><th class="r">RMSE 60 min</th><th class="r">MAPE 60 min</th></tr>
+  <tr><td>Historical average</td><td class="r">4.19</td><td class="r">4.19</td><td class="r">4.19</td><td class="r">7.86</td><td class="r">13.1%</td></tr>
+  <tr><td>Persistence</td><td class="r">3.49</td><td class="r">4.18</td><td class="r">5.33</td><td class="r">10.27</td><td class="r">14.4%</td></tr>
+  <tr><td>Ridge (local)</td><td class="r">3.23</td><td class="r">3.92</td><td class="r">4.96</td><td class="r">8.44</td><td class="r">15.1%</td></tr>
+  <tr><td>XGBoost (local)</td><td class="r">2.99</td><td class="r">3.44</td><td class="r">3.85</td><td class="r">7.26</td><td class="r">11.6%</td></tr>
+  <tr class="hl"><td>XGBoost (spatial)</td><td class="r">2.87</td><td class="r">3.32</td><td class="r">3.78</td><td class="r">7.07</td><td class="r">11.2%</td></tr>
+  <tr><td>Random Forest (local)</td><td class="r">2.97</td><td class="r">3.42</td><td class="r">3.87</td><td class="r">7.25</td><td class="r">11.7%</td></tr>
+  <tr><td>Random Forest (spatial)</td><td class="r">2.87</td><td class="r">3.31</td><td class="r">3.81</td><td class="r">7.06</td><td class="r">11.3%</td></tr>
+  <tr><td class="small">DCRNN (Li et al., 2018), published deep graph model on the same data</td><td class="r small">2.77</td><td class="r small">3.15</td><td class="r small">3.60</td><td class="r small">7.60</td><td class="r small">10.5%</td></tr>
+</table>
+<p>Three things stand out. <b>The two yardsticks bracket the problem:</b> persistence is excellent at 15 minutes but collapses by 60; the historical average is the same at every horizon. <b>The learned models combine both ideas and win:</b> at 60 minutes XGBoost (local) is 8% better than the historical average, 28% better than persistence and 22% better than Ridge. <b>XGBoost and the Random Forest are a tie</b> (0.01 mph apart; the forest has the slightly lower RMSE), so the choice between them is about training time — XGBoost is three times faster — not accuracy.</p>
+<figure><img src="../figures/fig_res_mae_by_horizon.png" alt="MAE by horizon" style="max-width:78%"><div class="cap">Test MAE for every model and horizon.</div></figure>
+
+<h3>What the neighbour features add (the key experiment)</h3>
+<p>Same learner, same rows, same settings — the only change is the eight neighbour columns:</p>
+<table class="keep">
+  <tr><th>Comparison</th><th class="r">15 min</th><th class="r">30 min</th><th class="r">60 min</th></tr>
+  <tr class="hl"><td>XGBoost: MAE reduction from adding neighbour features</td><td class="r">−4.1%</td><td class="r">−3.3%</td><td class="r">−1.8%</td></tr>
+  <tr><td>Random Forest: the same comparison</td><td class="r">−3.4%</td><td class="r">−3.1%</td><td class="r">−1.4%</td></tr>
+  <tr><td>XGBoost at 60 min, rush hour only</td><td class="r"></td><td class="r"></td><td class="r">−3.2%</td></tr>
+  <tr><td>XGBoost at 60 min, off-peak only</td><td class="r"></td><td class="r"></td><td class="r">−1.1%</td></tr>
+  <tr><td>Sensors whose 60-min error improved</td><td class="r"></td><td class="r"></td><td class="r">147 of 207 (up to −7.2%)</td></tr>
+</table>
+<p>The gain is there at every horizon and for both learners, so it is a property of the information, not of one algorithm. It is <b>three times larger in rush hour</b> than off-peak — the signature of congestion spreading between sensors. And it is <b>largest at short horizons and smallest at 60 minutes</b>, which is exactly what the physics predicts for one-hop features: a jam tail moving at 15–20 km/h crosses the 1–3 km to the next sensor in 5–15 minutes, so the neighbours' current state says most about the next 15–30 minutes, while what determines a sensor an hour ahead is still several hops away.</p>
+
+<h3>Rush hour vs off-peak — MAE at 60 minutes, mph</h3>
+<table class="keep">
+  <tr><th style="width:38%">Model</th><th class="r">Rush hour</th><th class="r">Off-peak</th><th class="r">Rush ÷ off-peak</th></tr>
+  <tr><td>Historical average</td><td class="r">6.53</td><td class="r">3.60</td><td class="r">1.8×</td></tr>
+  <tr><td>Persistence</td><td class="r">7.79</td><td class="r">4.71</td><td class="r">1.7×</td></tr>
+  <tr><td>Ridge (local)</td><td class="r">7.64</td><td class="r">4.28</td><td class="r">1.8×</td></tr>
+  <tr><td>XGBoost (local)</td><td class="r">5.86</td><td class="r">3.34</td><td class="r">1.8×</td></tr>
+  <tr class="hl"><td>XGBoost (spatial)</td><td class="r">5.67</td><td class="r">3.31</td><td class="r">1.7×</td></tr>
+  <tr><td>Random Forest (spatial)</td><td class="r">5.73</td><td class="r">3.33</td><td class="r">1.7×</td></tr>
+</table>
+<p>Every model's error roughly doubles in the peaks (weekdays 07–10 and 16–19). Almost all of the extra error is in jammed traffic below 35 mph; above it, even persistence is close to the best model. Rush hour is where the forecast matters most and where there is most left to gain.</p>
+
+<h3>The forecast as a jam detector (60 minutes ahead, jam = below 35 mph)</h3>
+<table class="keep">
+  <tr><th></th><th class="r">Real jam</th><th class="r">Real free-flowing</th></tr>
+  <tr><td><b>Model said jam</b></td><td class="r">78,082 (caught)</td><td class="r">13,604 (false alarms)</td></tr>
+  <tr><td><b>Model said free</b></td><td class="r">50,475 (missed)</td><td class="r">1,100,147 (correct)</td></tr>
+</table>
+<p>Precision <b>0.85</b> (when it says jam, it is right 85% of the time), recall <b>0.61</b> (it catches 61% of the jams an hour ahead), F1 <b>0.71</b> — against F1 0.64 for both the historical average and persistence. Model accuracy is 94.8%; always saying "free" would score 89.7%, which is why accuracy is not the headline. <b>Recall is the hard part:</b> a jam that has not yet reached a sensor is invisible in that sensor's own history, which is exactly the information a graph model would carry over.</p>
+<figure><img src="../figures/fig_res_congestion_map.png" alt="Congestion map"><div class="cap">Wednesday 13 June 2012 at 17:30: what was observed (left), what the historical average expected (middle), and what XGBoost (spatial) forecast an hour earlier (right). Dark = jammed.</div></figure>
+
+<h3>What the model actually uses</h3>
+<table class="keep">
+  <tr><th>Input</th><th class="r">Share of importance</th><th>What it is</th></tr>
+  <tr><td><code>lag_0</code></td><td class="r">23%</td><td>The speed right now</td></tr>
+  <tr class="hl"><td><code>down_mean_lag0</code></td><td class="r">8%</td><td>Speed of the downstream neighbours (the sensors ahead) right now</td></tr>
+  <tr><td><code>ha_now</code></td><td class="r">7%</td><td>The usual speed at this time of week</td></tr>
+  <tr><td><code>win_mean</code></td><td class="r">6%</td><td>Average of the last hour</td></tr>
+  <tr><td><code>up_mean_lag0</code></td><td class="r">6%</td><td>Speed of the upstream neighbours right now</td></tr>
+  <tr><td><code>nbr_frac_congested</code></td><td class="r">5%</td><td>Share of neighbours that are jammed</td></tr>
+  <tr><td><code>hour</code>, <code>is_weekend</code>, <code>tod_cos</code>, <code>tod_sin</code></td><td class="r">14%</td><td>The clock</td></tr>
+  <tr><td>All eight neighbour features together</td><td class="r">26%</td><td>The model does use the neighbourhood, and the sensors <i>ahead</i> most — as the physics predicts</td></tr>
+</table>
+<p class="small">Importance = share of XGBoost's split gain, averaged over all 207 sensors and 3 horizons.</p>
+
+<hr class="sec">
+
+<h2>8. Key insights</h2>
+<h3>1. Neighbours help — most in rush hour</h3>
+<p>Adding eight neighbour numbers to the same XGBoost lowers the error at every horizon, for 147 of 207 sensors, and three times more in the peaks than off-peak. The model's second most-used input is the downstream neighbours. Congestion really does spread between sensors, and a model that looks only at one sensor misses it.</p>
+<h3>2. The help fades at 60 minutes — and that is the gap for Phase 2</h3>
+<p>The published graph models beat single-sensor models by margins that <i>grow</i> with the horizon; our hand-built one-hop features help <i>least</i> at 60 minutes. The two facts agree: what matters an hour ahead is several hops away, along paths whose importance changes with the time of day — something a multi-layer, attention-weighted network can represent and a fixed one-hop average cannot. Our measurement is a lower bound on the value of network information, and the horizon at which it fades is where a Graph Attention Network should add the most.</p>
+<h3>3. Rush hour is the hard part</h3>
+<p>Error doubles in the peaks and sits almost entirely below 35 mph. The jam detector catches 61% of jams an hour ahead: the ones it misses have not yet reached the sensor's own history. Free-flowing traffic is easy — "the speed stays the same" is already nearly the best forecast there.</p>
+<h3>4. XGBoost and the Random Forest are a tie</h3>
+<p>0.01 mph apart on the test set; the forest has the slightly lower RMSE; XGBoost trains three times faster. We did not run a significance test, so we do not claim one is better.</p>
+<h3>5. The numbers can be trusted</h3>
+<p>Split by date with a gap; settings fixed in advance; the validation weeks rank the models in exactly the same order as the test weeks; early stopping kept about 130 of 600 trees. One command reruns everything from the raw file to every figure and every results table this report quotes, and eight automated tests check the split, the features and the scoring.</p>
+<h3>6. Accuracy would have hidden all of this</h3>
+<p>For the jam detector, "always free" scores 89.7% accuracy. We report MAE in mph, precision and recall instead.</p>
+
+<hr class="sec">
+
+<h2>9. Problems we found and fixed in our own pipeline</h2>
+<p>While checking our work, we found four problems and fixed them before producing the final numbers:</p>
+<ol>
+  <li><b>Our first write-up claimed the wrong direction.</b> We expected the neighbour gain to grow with the horizon, as it does for graph networks, and drafted the text that way. The numbers said the opposite (−4.1% at 15 min, −1.8% at 60). We rewrote the claim to match the results and worked out why one-hop features behave this way (Section 5).</li>
+  <li><b>The road-graph test was testing nothing.</b> Our first unit test used a toy graph in which all distances were equal, so every link weight fell below the cut-off and the adjacency matrix was empty — the test passed for the wrong reason. We rebuilt it with realistic multi-hop distances; it now checks the real behaviour, and the rebuilt matrix matches the published one exactly.</li>
+  <li><b>The data file would not open with the usual tool.</b> The released file is an old-format HDF5 that current pandas cannot read directly. We read it with the lower-level library and documented the file's checksum so anyone can verify they have the same data.</li>
+  <li><b>We considered filling the outages and decided against it.</b> Forward-filling the 0 mph gaps looked harmless until we measured the runs: the longest lasts almost six days, so filling would carry a stale reading through many rush hours. We kept the gaps as "unknown" and let the tree models handle them.</li>
+</ol>
+
+<hr class="sec">
+
+<h2>10. Limitations</h2>
+<ul>
+  <li><b>One city, four months of 2012.</b> We claim nothing about other seasons or cities, and the test weeks include the start of the summer holidays.</li>
+  <li><b>Settings fixed in advance.</b> Model settings were not tuned per sensor; a search on the validation weeks might narrow the XGBoost / Random Forest difference.</li>
+  <li><b>Unknown readings are skipped, not filled.</b> A live system would need a rule for sensors that go dark.</li>
+  <li><b>MAPE is dominated by low speeds</b> and should be read alongside MAE.</li>
+  <li><b>The neighbour features depend on the published road map.</b> Errors in the distance table would propagate.</li>
+  <li><b>No significance test.</b> The two best models are 0.01 mph apart.</li>
+  <li><b>Speed only.</b> METR-LA has no flow or occupancy; the PeMS source (Chen et al., 2001) does, and is the natural extension.</li>
+  <li><b>No control experiment yet.</b> Any claim about traffic-signal control waits for a simulator in Phase 2.</li>
+</ul>
+
+<hr class="sec">
+
+<h2>11. Next steps (Phase 2)</h2>
+<ol>
+  <li><b>Train a Graph Attention Network</b> on the same road graph, with the same one-hour history, horizons, split and masked scoring, so the comparison with Phase 1 is exact.</li>
+  <li><b>Check the attention against the physics:</b> does the network learn to listen to downstream neighbours in rush hour, as the backward wave predicts? Explore an LWR-based penalty as the hybrid ML/physics component.</li>
+  <li><b>Ablations</b> on how many hops the network looks out, which adjacency it uses, and how much history it sees.</li>
+  <li><b>Report the simple baselines</b> (historical average, persistence, XGBoost spatial) next to the deep model, always.</li>
+  <li><b>If time permits, a simulated multi-agent signal-control experiment</b> in SUMO or CityFlow that uses the forecasts — reported strictly as a simulation.</li>
+</ol>
+
+<hr class="sec">
+
+<h2>12. Team and contributions</h2>
+<table class="keep">
+  <tr><th>Member</th><th class="r">Enrollment</th><th>Work</th></tr>
+  <tr><td>Kartik Madaan</td><td class="r">2401010212</td><td>Data pipeline: acquisition, outage masking, road-graph construction, repository and reproducibility; exploratory data analysis and figures</td></tr>
+  <tr><td>Arhan Alam</td><td class="r">2401020010</td><td>Feature engineering, LWR-motivated neighbour features, chronological split and leakage tests</td></tr>
+  <tr><td>Chirag Lalwani</td><td class="r">2401020093</td><td>Model training: per-sensor XGBoost with early stopping, multi-output Random Forest, Ridge, settings</td></tr>
+  <tr><td>Siddhanth Sadshiv Raikar</td><td class="r">2401020110</td><td>Models (baselines, training runs, validation evidence) and the report: literature review, assembly and editing</td></tr>
+  <tr><td>Abhijeet Dey</td><td class="r">2401010014</td><td>Evaluation and results: masked metrics, rush hour vs off-peak, the neighbour ablation, jam detection and congestion maps</td></tr>
+</table>
+<p>All members reviewed every component and can present and defend the full pipeline.</p>
+<p>Code: github.com/&lt;your-account&gt;/traffic-flow-phase1 — one command (<code>run_all.sh</code>) reruns data → analysis → models → figures → results tables.</p>
+
+<hr class="sec">
+
+<h2>Glossary</h2>
+<table>
+  <tr><th>Term</th><th>Simple meaning</th></tr>
+  <tr><td><b>Sensor / reading</b></td><td>A loop detector buried in the road; every five minutes it reports the average speed of the cars over it</td></tr>
+  <tr><td><b>Horizon</b></td><td>How far ahead we predict: 15, 30 or 60 minutes</td></tr>
+  <tr><td><b>Train / validation / test</b></td><td>Data to learn from / data to decide when to stop training / data for the final, one-time check</td></tr>
+  <tr><td><b>Leakage</b></td><td>When the model sees information it would not have in real life, making its score look too good</td></tr>
+  <tr><td><b>Unknown (NaN)</b></td><td>A reading we do not trust (the sensor was offline); it is skipped, never counted as 0</td></tr>
+  <tr><td><b>Masked</b></td><td>Scoring only the cells whose true speed is known</td></tr>
+  <tr><td><b>MAE / RMSE / MAPE</b></td><td>Average mistake in mph / the same but punishing big misses more / the mistake as a percentage</td></tr>
+  <tr><td><b>Historical average</b></td><td>The usual speed of this sensor at this time of week</td></tr>
+  <tr><td><b>Persistence</b></td><td>"The speed stays what it is now"</td></tr>
+  <tr><td><b>Lag</b></td><td>A past value: lag 3 = the reading 15 minutes ago</td></tr>
+  <tr><td><b>Feature</b></td><td>A number the model uses as input</td></tr>
+  <tr><td><b>Local / spatial</b></td><td>Inputs about the sensor itself only / those plus inputs about its neighbours</td></tr>
+  <tr><td><b>Upstream / downstream</b></td><td>The sensors behind you (traffic comes from there) / the sensors ahead of you (traffic goes there)</td></tr>
+  <tr><td><b>LWR model</b></td><td>The 1955 theory that treats traffic like a fluid; it predicts that jams grow backwards</td></tr>
+  <tr><td><b>Early stopping</b></td><td>Stop adding trees when the validation error stops improving</td></tr>
+  <tr><td><b>Feature importance</b></td><td>How much the trained model relies on each input</td></tr>
+  <tr><td><b>Jam</b></td><td>Speed below 35 mph (the Caltrans definition of congested)</td></tr>
+  <tr><td><b>Precision / recall / F1</b></td><td>Of the jams we called, how many were real / of the real jams, how many we caught / one number combining both</td></tr>
+  <tr><td><b>Ablation</b></td><td>Removing one thing (here, the neighbour features) to measure what it was worth</td></tr>
+</table>
+
+<hr class="sec">
+
+<h2>References</h2>
+<ol class="refs">
+  <li>Y. Li, R. Yu, C. Shahabi, Y. Liu. "Diffusion Convolutional Recurrent Neural Network: Data-Driven Traffic Forecasting." <i>ICLR</i>, 2018.</li>
+  <li>M. J. Lighthill, G. B. Whitham. "On Kinematic Waves II. A Theory of Traffic Flow on Long Crowded Roads." <i>Proceedings of the Royal Society of London, Series A</i>, 229, pp. 317–345, 1955.</li>
+  <li>P. I. Richards. "Shock Waves on the Highway." <i>Operations Research</i>, 4(1), pp. 42–51, 1956.</li>
+  <li>B. D. Greenshields. "A Study of Traffic Capacity." <i>Highway Research Board Proceedings</i>, 14, pp. 448–477, 1935.</li>
+  <li>M. Treiber, A. Kesting. <i>Traffic Flow Dynamics: Data, Models and Simulation</i>. Springer, 2013.</li>
+  <li>E. I. Vlahogianni, M. G. Karlaftis, J. C. Golias. "Short-Term Traffic Forecasting: Where We Are and Where We're Going." <i>Transportation Research Part C</i>, 43, pp. 3–19, 2014.</li>
+  <li>Y. Zhang, A. Haghani. "A Gradient Boosting Method to Improve Travel Time Prediction." <i>Transportation Research Part C</i>, 58, pp. 308–324, 2015.</li>
+  <li>T. Chen, C. Guestrin. "XGBoost: A Scalable Tree Boosting System." <i>Proceedings of the 22nd ACM SIGKDD Conference</i>, pp. 785–794, 2016.</li>
+  <li>L. Breiman. "Random Forests." <i>Machine Learning</i>, 45(1), pp. 5–32, 2001.</li>
+  <li>A. E. Hoerl, R. W. Kennard. "Ridge Regression: Biased Estimation for Nonorthogonal Problems." <i>Technometrics</i>, 12(1), pp. 55–67, 1970.</li>
+  <li>C. Bergmeir, J. M. Benítez. "On the Use of Cross-Validation for Time Series Predictor Evaluation." <i>Information Sciences</i>, 191, pp. 192–213, 2012.</li>
+  <li>P. Veličković, G. Cucurull, A. Casanova, A. Romero, P. Liò, Y. Bengio. "Graph Attention Networks." <i>ICLR</i>, 2018.</li>
+  <li>C. Zhang, J. J. Q. Yu, Y. Liu. "Spatial-Temporal Graph Attention Networks: A Deep Learning Approach for Traffic Forecasting." <i>IEEE Access</i>, 7, pp. 166246–166256, 2019.</li>
+  <li>W. Jiang, J. Luo. "Graph Neural Network for Traffic Forecasting: A Survey." <i>Expert Systems with Applications</i>, 207, 117921, 2022.</li>
+  <li>C. Chen, K. Petty, A. Skabardonis, P. Varaiya, Z. Jia. "Freeway Performance Measurement System: Mining Loop Detector Data." <i>Transportation Research Record</i>, 1748, pp. 96–102, 2001.</li>
+  <li>H. V. Jagadish et al. "Big Data and Its Technical Challenges." <i>Communications of the ACM</i>, 57(7), pp. 86–94, 2014.</li>
+  <li>P. A. Lopez et al. "Microscopic Traffic Simulation using SUMO." <i>IEEE ITSC</i>, pp. 2575–2582, 2018.</li>
+  <li>H. Zhang et al. "CityFlow: A Multi-Agent Reinforcement Learning Environment for Large Scale City Traffic Scenario." <i>The Web Conference (WWW)</i>, pp. 3620–3624, 2019.</li>
+</ol>
+
+</body>
+</html>

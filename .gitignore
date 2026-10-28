@@ -1,0 +1,16 @@
+# data (re-download with scripts/download_data.py)
+data/raw/*.h5
+
+# predictions are large; metrics CSVs are kept
+results/pred_*.npz
+results/*.txt
+
+# python
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.venv/
+
+
+# macOS
+.DS_Store

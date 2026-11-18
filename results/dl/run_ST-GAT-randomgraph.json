@@ -1,0 +1,113 @@
+{
+ "history": [
+  {
+   "epoch": 1,
+   "train_loss": 4.157603353500366,
+   "val_mae": 3.562002658843994,
+   "lr": 0.001,
+   "seconds": 81.6702892780304
+  },
+  {
+   "epoch": 2,
+   "train_loss": 3.7094240589141845,
+   "val_mae": 3.49420166015625,
+   "lr": 0.001,
+   "seconds": 164.579571723938
+  },
+  {
+   "epoch": 3,
+   "train_loss": 3.6964433727264403,
+   "val_mae": 3.444936513900757,
+   "lr": 0.001,
+   "seconds": 249.92103719711304
+  },
+  {
+   "epoch": 4,
+   "train_loss": 3.6300992069244384,
+   "val_mae": 3.409743547439575,
+   "lr": 0.001,
+   "seconds": 330.39828276634216
+  },
+  {
+   "epoch": 5,
+   "train_loss": 3.576990997314453,
+   "val_mae": 3.369340181350708,
+   "lr": 0.001,
+   "seconds": 410.3287377357483
+  },
+  {
+   "epoch": 6,
+   "train_loss": 3.54705934715271,
+   "val_mae": 3.3451054096221924,
+   "lr": 0.001,
+   "seconds": 492.77815556526184
+  },
+  {
+   "epoch": 7,
+   "train_loss": 3.516664571762085,
+   "val_mae": 3.2973201274871826,
+   "lr": 0.001,
+   "seconds": 574.8637006282806
+  },
+  {
+   "epoch": 8,
+   "train_loss": 3.470195894241333,
+   "val_mae": 3.2795729637145996,
+   "lr": 0.001,
+   "seconds": 661.716331243515
+  },
+  {
+   "epoch": 9,
+   "train_loss": 3.4633859481811524,
+   "val_mae": 3.245443820953369,
+   "lr": 0.001,
+   "seconds": 745.4754266738892
+  },
+  {
+   "epoch": 10,
+   "train_loss": 3.4331441230773927,
+   "val_mae": 3.236999034881592,
+   "lr": 0.001,
+   "seconds": 836.1920166015625
+  },
+  {
+   "epoch": 11,
+   "train_loss": 3.430229866027832,
+   "val_mae": 3.2174692153930664,
+   "lr": 0.001,
+   "seconds": 927.6479444503784
+  },
+  {
+   "epoch": 12,
+   "train_loss": 3.3607905445098876,
+   "val_mae": 3.215949058532715,
+   "lr": 0.001,
+   "seconds": 1011.6533808708191
+  }
+ ],
+ "best_val_mae": 3.215949058532715,
+ "n_params": 43899,
+ "fit_seconds": 1043.8936440944672,
+ "config": {
+  "name": "ST-GAT-randomgraph",
+  "spatial": "gat",
+  "n_layers": 2,
+  "directed": true,
+  "graph": "random",
+  "base": "mean",
+  "lwr_weight": 0.0,
+  "zero_fill": false,
+  "hidden": 64,
+  "heads": 4,
+  "dropout": 0.1,
+  "lr": 0.001,
+  "weight_decay": 0.0001,
+  "batch_size": 64,
+  "max_epochs": 12,
+  "samples_per_epoch": 8000,
+  "patience": 5,
+  "grad_clip": 5.0,
+  "seed": 42,
+  "extra": {}
+ }
+}

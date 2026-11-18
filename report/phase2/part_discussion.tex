@@ -1,0 +1,30 @@
+% ------------------------------------------------------------------------------------
+\section{Discussion}
+\paragraph{Did Phase 2 close the Phase 1 gap?} Partly, and in the predicted place. Phase~1's one-hop features improved XGBoost by 4.1/3.3/1.8\% at 15/30/60 minutes. Relative to the same deep network without a graph, two layers of message passing improve MAE by \pRelGatVsGruFifteen/\pRelGatVsGruThirty/\pRelGatVsGruSixty\%; relative to XGBoost-spatial the graph models gain most at 30 and 60 minutes and nothing at 15. Information from more than one hop away is useful for the longer horizons, as the LWR picture suggests. The gain is modest --- a few percent --- which is in line with published comparisons between strong single-sensor and graph models once both use the same inputs.
+
+\paragraph{Why the hybrid works} Stacking works when the two models make different mistakes. XGBoost uses the latest reading, the usual speed and the clock very sharply, which makes it hard to beat at 15 minutes; the graph network sees propagation that XGBoost cannot. Learning the residual on \emph{out-of-fold} forecasts is what makes this honest: with in-sample XGBoost predictions the residuals would be close to zero in training and the network would learn nothing useful. The hybrid's edge over the pure graph network is largest at 15 minutes and vanishes at 60, which matches this division of labour.
+
+\paragraph{Attention vs fixed weights; physics} On a freeway graph whose edges come from a distance kernel, the kernel weights are already a sensible guess at who influences whom, so learned attention adds interpretability more than accuracy. The LWR penalty was neutral. Its approximations (Greenshields' diagram, point sensors standing in for road cells, no ramp flows) are coarse, and the data term already pins down the forecast; a stronger physics component would need flow and occupancy data (PeMS) or a learned fundamental diagram.
+
+\paragraph{Limitations} (i)~CPU budget: one run per main model, 30 epochs, 8{,}000 windows per epoch; longer training on a GPU would likely lower every deep model's error. (ii)~Ablations use a 12-epoch budget, so they rank design choices but do not give final accuracies. (iii)~Seed spread was measured on the short budget only. (iv)~The deep models, trained on MAE, have a higher RMSE than XGBoost. (v)~One city and four months of 2012; the test weeks are slightly harder than the training weeks. (vi)~No signal-control experiment was run: the brief makes it optional, and any such result would be a simulation only.
+
+% ------------------------------------------------------------------------------------
+\section{Conclusion}
+Keeping every element of the Phase~1 protocol fixed, we showed that graph deep learning improves highway-speed forecasts mainly at 30--60 minutes, where one-hop features had faded; that the improvement comes from the graph and not only from deep sequence modelling; that learned attention matches but does not beat fixed road weights on this network; and that a leakage-free hybrid, in which a graph attention network corrects XGBoost, is the best model at every horizon with statistically significant gains. Natural next steps are longer GPU training, a Huber or quantile loss to reduce large misses, PeMS flow and occupancy for a stronger physics term, and a simulated multi-agent signal-control experiment (SUMO or CityFlow~\cite{lopez2018sumo,zheng2019cityflow}) that consumes these forecasts.
+
+% ------------------------------------------------------------------------------------
+\section*{Individual Contributions}
+\begin{tabular}{@{}p{2.4cm}p{5.3cm}@{}}
+\hline
+Member & Phase 2 contribution \\
+\hline
+Kartik Madaan \newline {\footnotesize 2401010212} & DL data pipeline (graph tensors, scaling, mask channel, road-distance matrix), repository, unit tests, reproducibility \\
+Arhan Alam \newline {\footnotesize 2401020010} & Architecture: GRU encoder, edge-list graph attention, diffusion block; hop, direction and random-graph ablations \\
+Chirag Lalwani \newline {\footnotesize 2401020093} & Training and regularisation (AdamW, dropout, early stopping); out-of-fold XGBoost and the hybrid model \\
+Siddhanth Sadshiv Raikar \newline {\footnotesize 2401020110} & DL literature review; LWR physics penalty; report assembly \\
+Abhijeet Dey \newline {\footnotesize 2401010014} & Evaluation: horizon/peak metrics, Diebold--Mariano tests, seeds, maps, attention analysis \\
+\hline
+\end{tabular}
+\vspace{2mm}
+
+\noindent All members reviewed every component and can present and defend the full pipeline.

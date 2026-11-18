@@ -1,0 +1,17 @@
+\begin{table*}[t]\centering
+\caption{Test-set masked MAE, RMSE (mph) and MAPE (\%) by horizon, 4--27 June 2012, identical samples for all models. P1 = Phase~1 model, P2 = Phase~2. Best MAE in bold.}
+\label{tab:main}\footnotesize\setlength{\tabcolsep}{4pt}
+\begin{tabular}{llrrrrrrrrr}\hline
+ & & \multicolumn{3}{c}{15 min} & \multicolumn{3}{c}{30 min} & \multicolumn{3}{c}{60 min}\\
+Model & & MAE & RMSE & MAPE & MAE & RMSE & MAPE & MAE & RMSE & MAPE\\\hline
+Historical average & P1 & 4.19 & 7.86 & 13.1 & 4.19 & 7.86 & 13.1 & 4.19 & 7.86 & 13.1\\
+Persistence & P1 & 3.49 & 6.38 & 8.6 & 4.18 & 8.00 & 10.8 & 5.33 & 10.27 & 14.4\\
+XGBoost + nbrs & P1 & 2.87 & 5.18 & 7.6 & 3.32 & 6.16 & 9.4 & 3.78 & 7.07 & 11.2\\
+Random Forest + nbrs & P1 & 2.87 & 5.16 & 7.7 & 3.31 & 6.09 & 9.4 & 3.81 & 7.06 & 11.3\\
+\hline
+GRU, no graph & P2 & 2.91 & 5.71 & 8.0 & 3.31 & 6.68 & 9.6 & 3.71 & 7.69 & 11.4\\
+Diffusion GCN & P2 & 2.88 & 5.51 & 7.7 & 3.24 & 6.41 & 9.1 & \textbf{3.66} & 7.44 & 10.9\\
+ST-GAT & P2 & 2.88 & 5.52 & 7.9 & 3.26 & 6.46 & 9.5 & 3.68 & 7.52 & 11.3\\
+ST-GAT + LWR & P2 & 2.88 & 5.53 & 7.9 & 3.25 & 6.46 & 9.4 & 3.68 & 7.50 & 11.2\\
+Hybrid XGB+ST-GAT & P2 & \textbf{2.80} & 5.20 & 7.4 & \textbf{3.23} & 6.19 & 9.1 & 3.68 & 7.15 & 11.0\\
+\hline\end{tabular}\end{table*}

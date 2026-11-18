@@ -1,0 +1,14 @@
+\begin{table}[t]\centering
+\caption{Ablations under an identical 12-epoch budget: test MAE (mph) and change vs the reference ST-GAT-short.}
+\label{tab:abl}\footnotesize
+\begin{tabular}{lrrrr}\hline
+Variant & 15 min & 60 min & $\Delta$15 & $\Delta$60\\\hline
+reference (2 hops) & 3.00 & 4.08 & -- & --\\
+1 hop & 3.00 & 4.09 & +0.001 & +0.008\\
+3 hops & 2.98 & 3.97 & -0.017 & -0.104\\
+undirected edges & 2.98 & 4.03 & -0.015 & -0.045\\
+random graph & 2.99 & 4.08 & -0.010 & -0.003\\
+outages as 0 mph & 3.03 & 4.09 & +0.036 & +0.008\\
+no dropout/decay & 2.95 & 3.93 & -0.046 & -0.151\\
+hybrid, no graph & 2.81 & 3.70 & -0.191 & -0.381\\
+\hline\end{tabular}\end{table}

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate the two project notebooks (notebooks/01_eda.ipynb, notebooks/02_features_and_models.ipynb).
+"""Generate the project notebooks (01_eda, 02_features_and_models, 03_deep_learning).
 
 The notebooks are thin, documented front-ends over the ``trafficml`` package:
 they reproduce the key tables live and display the figures produced by the
@@ -213,8 +213,59 @@ fig("fig_res_congestion_f1"); fig("fig_res_congestion_map", 950); fig("fig_res_e
     return nb
 
 
+def dl_notebook():
+    nb = nbf.v4.new_notebook()
+    nb.cells = [
+        md("""
+# 03 · Phase 2 — Deep learning on the road graph (ST-GAT, hybrid, ablations)
+
+Phase 1 found that one-hop neighbour features help XGBoost by 4.1% at 15 min but only 1.8% at 60 min.
+Phase 2 asks whether a network that **learns** to pass information several hops along the road graph closes that gap.
+Everything that defined the Phase 1 comparison is unchanged: masking, chronological split with gaps, the
+one-hour window, horizons, test samples and the evaluation code. Training runs in `scripts/train_dl.py`
+(~40 min per main model on 2 CPU cores); this notebook loads the saved predictions and shows the evidence.
+"""),
+        code(SETUP + "\nimport torch\nfrom trafficml.dl.data import build_graph_data, batch_iter\nfrom trafficml.dl.models import STNet\nfrom trafficml.dl.train import RunConfig, build_model\nDL = C.RESULTS_DIR / 'dl'"),
+        md("## 1. Data as graph sequences\nEach example is the last hour of every sensor (12 × 207 × 7 features) → the speed 15/30/60 min later. Outages: z-scored value 0 plus a mask channel, never 0 mph."),
+        code("""gd = build_graph_data()
+print("x_all", gd.x_all.shape, "  y_all", gd.y_all.shape)
+print("train / val / test samples:", len(gd.split.train), len(gd.split.val), len(gd.split.test))
+print("features: speed_z, mask, tod_sin, tod_cos, dow_sin, dow_cos, usual_speed_z")
+print("share of inputs that are outages:", round(1 - gd.x_all[:, :, 1].mean(), 4))"""),
+        md("## 2. The model\nOne skeleton; only the spatial block changes (`none` = no graph, `gcn` = fixed diffusion, `gat` = attention)."),
+        code("""fig("fig_dl_architecture", 900)
+for sp in ("none", "gcn", "gat"):
+    m = build_model(RunConfig(spatial=sp), gd)
+    print(f"{sp:5s}", sum(p.numel() for p in m.parameters()), "parameters")"""),
+        md("## 3. Training curves (early stopping on validation masked MAE)"),
+        code('fig("fig_dl_training_curves", 650)'),
+        md("## 4. Results on the June test weeks (same samples as Phase 1)"),
+        code("""hor = pd.read_csv(DL / "metrics_horizon.csv")
+main = ["HA", "Persistence", "XGB-spatial", "RF-spatial", "GRU-nograph", "DCRNN-lite", "ST-GAT", "ST-GAT-LWR", "Hybrid-XGB-GAT"]
+hor[hor.model.isin(main)].pivot(index="model", columns="horizon", values="MAE").loc[[m for m in main if m in set(hor.model)]].round(3)"""),
+        code('fig("fig_dl_mae_by_horizon", 860); fig("fig_dl_gain_vs_xgb", 900)'),
+        md("## 5. Is the difference real? Diebold–Mariano test vs XGBoost + neighbours"),
+        code('pd.read_csv(DL / "diebold_mariano.csv").round(4)'),
+        md("## 6. Ablations (12-epoch budget, compared with ST-GAT-short) and seeds"),
+        code("""ab = pd.read_csv(DL / "ablations.csv").set_index("model")
+display(ab[["15min", "30min", "60min", "average", "delta_15min", "delta_60min"]].round(3))
+f = DL / "seeds_summary.csv"
+if f.exists(): display(pd.read_csv(f).round(3))
+fig("fig_dl_ablations", 900)"""),
+        md("## 7. Rush hour, maps and attention"),
+        code("""pk = pd.read_csv(DL / "metrics_peak_offpeak.csv")
+display(pk[(pk.horizon == "60min") & pk.model.isin(main)].pivot(index="model", columns="period", values="MAE").round(3))
+fig("fig_dl_congestion_map", 900); fig("fig_dl_sensor_gain_map", 900)
+fig("fig_dl_attention", 650)
+display(pd.read_csv(DL / "attention_analysis.csv").round(3).head(12))"""),
+    ]
+    nb.metadata["kernelspec"] = {"name": "python3", "display_name": "Python 3", "language": "python"}
+    return nb
+
+
 if __name__ == "__main__":
     NB_DIR.mkdir(exist_ok=True)
     nbf.write(eda_notebook(), NB_DIR / "01_eda.ipynb")
     nbf.write(model_notebook(), NB_DIR / "02_features_and_models.ipynb")
+    nbf.write(dl_notebook(), NB_DIR / "03_deep_learning.ipynb")
     print("notebooks written to", NB_DIR)

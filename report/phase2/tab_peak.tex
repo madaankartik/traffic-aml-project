@@ -1,0 +1,12 @@
+\begin{table}[t]\centering
+\caption{Test MAE (mph) at 60 minutes, weekday rush hours (07--10, 16--19) vs off-peak, and change vs XGBoost-spatial.}
+\label{tab:peak}\footnotesize
+\begin{tabular}{lrrrr}\hline
+Model & Peak & $\Delta$ & Off-peak & $\Delta$\\\hline
+XGBoost + nbrs & 5.67 & -- & 3.31 & --\\
+GRU, no graph & 5.67 & +0.1\% & 3.22 & -2.7\%\\
+Diffusion GCN & 5.54 & -2.2\% & 3.18 & -3.8\%\\
+ST-GAT & 5.62 & -0.8\% & 3.19 & -3.6\%\\
+ST-GAT + LWR & 5.63 & -0.6\% & 3.18 & -3.7\%\\
+Hybrid XGB+ST-GAT & 5.53 & -2.3\% & 3.21 & -3.0\%\\
+\hline\end{tabular}\end{table}

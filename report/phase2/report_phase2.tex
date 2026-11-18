@@ -1,0 +1,48 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{xcolor}
+\usepackage{url}
+\usepackage[hidelinks]{hyperref}
+\graphicspath{{../../figures/}}
+\input{numbers_p2.tex}
+
+\begin{document}
+
+\title{Multi-Agent Traffic Flow Control via Graph Attention Networks and LWR Models\\
+\large Phase 2: Graph Deep Learning and an ML--DL Hybrid for Traffic-Speed Forecasting on METR-LA}
+
+\author{
+\IEEEauthorblockN{Kartik Madaan\IEEEauthorrefmark{1},
+Arhan Alam\IEEEauthorrefmark{1},
+Chirag Lalwani\IEEEauthorrefmark{1},
+Siddhanth Sadshiv Raikar\IEEEauthorrefmark{1},
+Abhijeet Dey\IEEEauthorrefmark{1}}
+\IEEEauthorblockA{\IEEEauthorrefmark{1}Team T082, Section B\\ Advanced Machine Learning \& Deep Learning (CSAI)\\
+Newton School of Technology, Rishihood University\\
+\{kartik.madaan2024, arhan.alam2024, chirag.lalwani2024,\\ siddhanth.raikar2024, abhijeet.dey2024\}@nst.rishihood.edu.in}
+}
+
+\maketitle
+
+\begin{abstract}
+Phase~1 showed that a per-sensor XGBoost model with hand-built one-hop neighbour features forecasts METR-LA highway speeds well, but that the benefit of the neighbours fades from 4.1\% at 15 minutes to 1.8\% at 60 minutes --- consistent with LWR traffic theory, in which congestion propagates upstream over several sensors within an hour. Phase~2 tests whether graph deep learning closes this gap, keeping data, masking, split, history window, horizons, test samples and evaluation code identical to Phase~1. We build a spatio-temporal graph attention network (ST-GAT) with separate attention over upstream and downstream neighbours, and compare it with a no-graph network of the same size and a fixed-weight diffusion graph network. We also propose a hybrid in which ST-GAT learns the residual of the Phase~1 XGBoost forecast, trained on leakage-free out-of-fold predictions, and a variant with a soft LWR conservation penalty. The hybrid is the best model at every horizon (\pMaeHybFifteen/\pMaeHybThirty/\pMaeHybSixty~mph MAE at 15/30/60~min, \pChgHybFifteen/\pChgHybThirty/\pChgHybSixty\% vs XGBoost, Diebold--Mariano $p<0.001$). Against the same network without a graph, the graph adds a small but significant gain at every horizon, and against XGBoost the graph models gain mainly at 30--60 minutes, where the Phase~1 features faded, while learned attention performs on par with fixed road-distance weights and the physics penalty is neutral. Seven controlled ablations, three seeds, pairwise significance tests and an attention analysis support the conclusions. All code runs on two CPU cores and is reproducible with one command.
+\end{abstract}
+
+\begin{IEEEkeywords}
+traffic forecasting, graph attention network, diffusion convolution, hybrid model, stacking, physics-informed learning, METR-LA, ablation
+\end{IEEEkeywords}
+
+\input{part_static.tex}
+\input{part_method.tex}
+\input{part_results.tex}
+\input{part_discussion.tex}
+
+\bibliographystyle{IEEEtran}
+\bibliography{refs}
+
+\end{document}

@@ -37,28 +37,56 @@ quantifies the "gap" a Graph Attention Network will target in Phase 2.
 
 ![MAE by horizon](figures/fig_res_mae_by_horizon.png)
 
+## Phase 2 — deep learning on the road graph (results at a glance)
+
+Same data, outage masking, chronological split, one-hour history, horizons, **test samples** and
+evaluation code as Phase 1; only the model changes. Test MAE (mph), 4–27 June 2012:
+
+| Model | 15 min | 30 min | 60 min |
+|---|---|---|---|
+| Phase 1 best: XGBoost + neighbour features | 2.87 | 3.32 | 3.78 |
+| GRU, no graph (same network, graph removed) | 2.91 | 3.31 | 3.71 |
+| Diffusion GCN, fixed road-distance weights | 2.88 | 3.24 | 3.66 |
+| ST-GAT, attention over upstream / downstream neighbours | 2.88 | 3.26 | 3.68 |
+| ST-GAT + soft LWR conservation penalty | 2.88 | 3.25 | 3.68 |
+| **Hybrid: XGBoost + ST-GAT residual (out-of-fold stacking)** | **2.80** | **3.23** | **3.68** |
+
+* The hybrid is best at every horizon (−2.4 / −2.9 / −2.8 % vs XGBoost; Diebold–Mariano p < 0.001).
+* Graph vs the same network without a graph: significantly better at every horizon.
+* Learned attention ≈ fixed road weights; the LWR penalty is neutral; deep models have higher RMSE.
+* 7 controlled ablations (hops, direction, random graph, masking, regularisation, hybrid without graph),
+  3 seeds, attention analysis. Full details: `report/phase2/report_phase2.pdf` (IEEE).
+
+Phase 2 files: `src/trafficml/dl/` (data, models, train) · `scripts/xgb_oof.py` · `scripts/train_dl.py` ·
+`scripts/evaluate_dl.py` · `scripts/make_dl_figures.py` · `scripts/make_arch_figure.py` ·
+`scripts/make_p2_numbers.py` · `tests/test_dl.py` · `notebooks/03_deep_learning.ipynb` ·
+`results/dl/` · `figures/fig_dl_*` · `report/phase2/` · `slides/T082_Phase2_Presentation.pptx`.
+Training takes ~6 h on 2 CPU cores (minutes on a GPU); trained weights are in `results/dl/model_*.pt`.
+
 ## Repository layout
 
 ```
 traffic-flow-phase1/
 ├── README.md · requirements.txt · pyproject.toml · run_all.sh
-├── src/trafficml/        the method (6 modules)
+├── src/trafficml/        the method (6 modules + dl/ for Phase 2)
 │   ├── config.py         paths, constants, hyper-parameters — single source of truth
 │   ├── data.py           load METR-LA, mask outages, build the sensor graph
 │   ├── features.py       lag / calendar / historical-average / neighbour features, chronological split
 │   ├── models.py         HA, persistence, Ridge, per-segment XGBoost, multi-output Random Forest
 │   ├── evaluate.py       masked MAE / RMSE / MAPE, peak vs off-peak, per sensor, congestion detection
-│   └── plots.py          consistent figure style
+│   ├── plots.py          consistent figure style
+│   └── dl/               Phase 2: graph tensors (data.py), GRU/diffusion/graph-attention nets (models.py),
+│                         training, LWR penalty, hybrid (train.py)
 ├── scripts/              the pipeline, in order: download_data → run_eda → run_experiments →
 │                         make_result_figures → fill_docs → build_notebooks
-├── notebooks/            01_eda.ipynb · 02_features_and_models.ipynb (executed, outputs included)
-├── tests/                8 unit tests (split integrity, lags, neighbour features, masked metrics)
+├── notebooks/            01_eda · 02_features_and_models · 03_deep_learning (executed, outputs included)
+├── tests/                14 unit tests (split, lags, neighbour features, masked metrics, graph attention, hops)
 ├── data/                 README (provenance, checksums, quality audit, split) · raw/metr-la.h5 (download script) · sensor_graph/ (4 files)
 ├── results/              12 files: metrics by horizon / peak / hour / congestion / validation,
 │                         per_sensor_mae, feature_importance, best_iterations, EDA summary, split, config
 ├── figures/              21 PNG figures used by the report, slides and notebooks
-├── report/               report_simple.html → report_simple.pdf (the Phase 1 report) · refs.bib (reference list)
-└── slides/               the Phase 1 presentation (.pptx)
+├── report/               report.html → report.pdf (Phase 1) · refs.bib · phase2/ (Phase 2 IEEE LaTeX + PDF)
+└── slides/               Phase 1 and Phase 2 presentations (.pptx + .pdf)
 ```
 
 ## Reproduce everything
@@ -81,7 +109,7 @@ python scripts/run_experiments.py        # ~80 min on 2 CPU cores (all 7 models)
 python scripts/make_result_figures.py
 jupyter nbconvert --execute --inplace notebooks/*.ipynb
 python -m pytest tests -q                # 8 unit tests (split integrity, lags, neighbour features, metrics)
-# report: every number in report/report_simple.html comes from results/*.csv; to re-export the PDF, open the
+# report: every number in report/report.html comes from results/*.csv; to re-export the PDF, open the
 # HTML in Chrome and print to PDF (A4, background graphics on)
 ```
 

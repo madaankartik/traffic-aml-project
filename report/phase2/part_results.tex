@@ -1,0 +1,51 @@
+% ------------------------------------------------------------------------------------
+\section{Results}\label{sec:results}
+\subsection{Main comparison}
+Table~\ref{tab:main} and Fig.~\ref{fig:horizon} give test MAE, RMSE and MAPE on the June weeks, on exactly the Phase~1 samples. Four findings stand out.
+
+\emph{(i) Deep sequence modelling alone already helps at longer horizons.} The GRU without any graph is worse than XGBoost-spatial at 15 minutes (\pMaeGRUFifteen{} vs \pMaeXGBsFifteen{}) but better at 30 and 60 minutes (\pMaeGRUSixty{} vs \pMaeXGBsSixty{}), although it sees no neighbour at all. A learned representation of the whole hour (level, slope, missingness, time) extrapolates further than 34 hand-built features.
+
+\emph{(ii) The road graph adds a consistent gain on top.} With identical size and training, adding two graph-attention layers lowers MAE by \pRelGatVsGruFifteen\%, \pRelGatVsGruThirty\% and \pRelGatVsGruSixty\% at 15/30/60 minutes relative to the no-graph GRU; the fixed-weight diffusion model does the same. Against XGBoost-spatial, ST-GAT ties at 15 minutes (DM $p=\pDmPGATFifteen$) and is significantly better at 30 and 60 minutes (\pChgGATThirty\% and \pChgGATSixty\%, both $p<10^{-10}$) --- precisely the horizons at which the Phase~1 one-hop features faded.
+
+\emph{(iii) Learned attention is not better than fixed road weights here.} DCRNN-lite (\pMaeGCNFifteen/\pMaeGCNThirty/\pMaeGCNSixty) and ST-GAT (\pMaeGATFifteen/\pMaeGATThirty/\pMaeGATSixty) are within a few hundredths of a mph, and the fixed-weight model is even slightly (but significantly) better at 30--60 minutes (\S\ref{sec:sig}). On a freeway graph whose links already encode driving distance, the Gaussian kernel is a good prior; attention earns its place through interpretability (\S\ref{sec:att}) rather than accuracy.
+
+\emph{(iv) The hybrid is the best model at every horizon.} XGBoost + ST-GAT residual reaches \pMaeHybFifteen/\pMaeHybThirty/\pMaeHybSixty~mph, \pChgHybFifteen\%, \pChgHybThirty\% and \pChgHybSixty\% against XGBoost-spatial alone (DM statistics \pDmHybFifteen, \pDmHybThirty, \pDmHybSixty; all $p<10^{-10}$). Its biggest edge over the pure graph network is at 15 minutes (\pRelHybVsGatFifteen\%), where the tree model's sharp use of the current reading and the usual speed matters most; at 60 minutes the two converge, because there the correction carries most of the information. Each part does what it is best at: the tree model the per-sensor level and daily cycle, the graph network the propagation. For reference, DCRNN reports 2.77/3.15/3.60~\cite{li2018dcrnn} after 100 GPU epochs on a slightly different split; our CPU-trained hybrid is within 0.03--0.08~mph.
+
+\input{tab_main.tex}
+
+\begin{figure}[t]\centering
+\includegraphics[width=\columnwidth]{fig_dl_mae_by_horizon}
+\caption{Test MAE by horizon for the Phase~1 references and the Phase~2 models.}
+\label{fig:horizon}
+\end{figure}
+
+\subsection{Rush hour}
+Table~\ref{tab:peak} and Fig.~\ref{fig:gain} split the 60-minute errors by period. The graph models improve on XGBoost-spatial in both weekday rush hours and off-peak. In mph the gains are similar or slightly larger in the peaks (hybrid: \pPeakXGBsSixty{} $\rightarrow$ \pPeakHybSixty{} peak, \pOffXGBsSixty{} $\rightarrow$ \pOffHybSixty{} off-peak); in relative terms they are slightly larger off-peak (\pChgPeakHybSixty\% vs \pChgOffHybSixty\%), because the off-peak error is small to begin with. The no-graph GRU gains almost nothing in the peaks (\pChgPeakGRUSixty\%) while the diffusion model gains \pChgPeakGCNSixty\%: in rush hour the improvement comes from the graph. Rush hour remains about 1.7$\times$ harder than off-peak for every model; it is still where most of the error is. The congestion map (Fig.~\ref{fig:map}) shows the evening jam of 13~June as forecast an hour ahead.
+
+\input{tab_peak.tex}
+
+\begin{figure*}[t]\centering
+\includegraphics[width=0.95\textwidth]{fig_dl_gain_vs_xgb}
+\caption{MAE change of each Phase~2 model relative to XGBoost-spatial (Phase~1's best), overall, in weekday rush hours and off-peak. Below zero is better.}
+\label{fig:gain}
+\end{figure*}
+
+\begin{figure*}[t]\centering
+\includegraphics[width=0.95\textwidth]{fig_dl_congestion_map}
+\caption{Congestion map, Wednesday 13 June 2012 at 17:30: observed speeds and 60-minute-ahead forecasts from XGBoost-spatial and the best Phase~2 model.}
+\label{fig:map}
+\end{figure*}
+
+\subsection{Jam detection and large errors}
+Scored as a detector of speeds below 35~mph at 60 minutes, the graph models catch more jams than XGBoost-spatial: recall rises from \pRecXGBsSixty{} to \pRecGCNSixty{} (diffusion) and \pRecGATSixty{} (ST-GAT), F1 from \pFoneXGBsSixty{} to \pFoneGCNSixty{} and \pFoneGATSixty, at a small cost in precision. The pure deep models, however, have a \emph{higher RMSE} than XGBoost (\pRmseGATSixty{} vs \pRmseXGBsSixty{} at 60 minutes): trained on absolute error, they predict something close to the conditional median and under-predict the rare, deep speed drops that dominate squared error. The hybrid, anchored on the tree forecast, keeps RMSE close to XGBoost's (\pRmseHybSixty) while improving MAE. A Huber or quantile loss is the natural next step.
+
+\input{part_ablation.tex}
+
+\subsection{Where the attention looks}\label{sec:att}
+In the undirected ST-GAT one softmax covers a sensor itself and both its upstream and downstream neighbours, so attention shares can be compared (Fig.~\ref{fig:att}). When a sensor is free-flowing it puts \pAttFreeSelf\% of its first-layer attention on itself, \pAttFreeDownstream\% on downstream and \pAttFreeUpstream\% on upstream neighbours; when it is jammed the shares become \pAttJammedSelf\%, \pAttJammedDownstream\% and \pAttJammedUpstream\%. This is an analysis of one trained model and one layer, not a causal statement, but it is the kind of check that relates what the network learned to the LWR picture of queues and platoons.
+
+\begin{figure}[t]\centering
+\includegraphics[width=\columnwidth]{fig_dl_attention}
+\caption{Share of first-layer attention placed on the sensor itself, its downstream and its upstream neighbours (undirected ST-GAT, 1{,}500 random test times), for free-flowing vs jammed sensors.}
+\label{fig:att}
+\end{figure}

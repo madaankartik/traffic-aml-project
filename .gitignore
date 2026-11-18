@@ -3,6 +3,8 @@ data/raw/*.h5
 
 # predictions are large; metrics CSVs are kept
 results/pred_*.npz
+results/dl/pred_*.npz
+results/xgb_spatial_oof_train.npz
 results/*.txt
 
 # python
@@ -14,3 +16,10 @@ __pycache__/
 
 # macOS
 .DS_Store
+
+# latex build files (Phase 2 report)
+report/phase2/*.aux
+report/phase2/*.bbl
+report/phase2/*.blg
+report/phase2/*.log
+report/phase2/*.out
